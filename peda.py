@@ -3593,13 +3593,24 @@ class PEDACmd(object):
         """
         (address, fmt_count) = normalize_argv(arg, 2)
         if isinstance(fmt_count, str) and fmt_count.startswith("/"):
+            msg("not ok")
             count = to_int(fmt_count[1:])
             if not count or to_int(address) is None:
                 self._missing_argument()
             else:
                 code = peda.get_disasm(address, count)
         else:
-            code = peda.disassemble(*arg)
+            if not address and not fmt_count:
+                if self._is_running():
+                    address = peda.getreg("pc")
+                    code = peda.get_disasm(address, 0x100).split("\n")
+                    for count in range(len(code)):
+                        if "ret" in code[count]:
+                            count += 1
+                            code = "\n".join(code[:count])
+                            break
+            else:
+                code = peda.disassemble(*arg)
         msg(format_disasm_code(code))
 
         return
